@@ -14,7 +14,35 @@ export async function registrationConversation(
   conversation: Conversation<MyContext>,
   ctx: MyContext
 ) {
-  await ctx.reply("Xush kelibsiz! Telefon raqamingizni ulashing:", {
+  const telegramId = BigInt(ctx.from!.id);
+
+  // --- ROLE SELECTION ---
+  await ctx.reply("Siz kim sifatida foydalanasiz?", {
+    reply_markup: {
+      inline_keyboard: [[
+        { text: "🚗 Haydovchi", callback_data: "reg_role:driver" },
+        { text: "🧳 Yo'lovchi", callback_data: "reg_role:passenger" },
+      ]],
+    },
+  });
+
+  let roleCtx = await conversation.waitFor("callback_query:data");
+  while (!roleCtx.callbackQuery.data.startsWith("reg_role:")) {
+    await roleCtx.answerCallbackQuery();
+    roleCtx = await conversation.waitFor("callback_query:data");
+  }
+  const isDriver = roleCtx.callbackQuery.data === "reg_role:driver";
+  await roleCtx.answerCallbackQuery();
+
+  await conversation.external(() =>
+    prisma.user.update({
+      where: { telegramId },
+      data: { role: isDriver ? "DRIVER" : "PASSENGER" },
+    })
+  );
+
+  // --- PHONE ---
+  await ctx.reply("Telefon raqamingizni ulashing:", {
     reply_markup: {
       keyboard: [[{ text: "📱 Raqamni ulashish", request_contact: true }]],
       resize_keyboard: true,
@@ -24,12 +52,19 @@ export async function registrationConversation(
 
   const contactCtx = await conversation.waitFor("message:contact");
   const phone = contactCtx.message.contact.phone_number;
-  const telegramId = BigInt(ctx.from!.id);
 
-  await conversation.external(async () => {
-    await prisma.user.update({ where: { telegramId }, data: { phone } });
-  });
+  await conversation.external(() =>
+    prisma.user.update({ where: { telegramId }, data: { phone } })
+  );
 
+  // --- PASSENGER: done ---
+  if (!isDriver) {
+    const { passengerKeyboard } = await import("../keyboards/main.js");
+    await ctx.reply("✅ Ro'yxatdan o'tdingiz!", { reply_markup: passengerKeyboard });
+    return;
+  }
+
+  // --- DRIVER: route selection ---
   const regions = await conversation.external(() =>
     prisma.region.findMany({ orderBy: { id: "asc" } })
   );
@@ -103,9 +138,9 @@ export async function registrationConversation(
       });
     } else if (data.startsWith("reg_to:") && fromDistrictId !== null && fromRegionId !== null && toRegionId !== null) {
       const toDistrictId = Number(data.split(":")[1]);
-      const fRid = fromRegionId;   // captured as number (narrowed by the null checks above)
-      const fDid = fromDistrictId; // captured as number
-      const tRid = toRegionId;     // captured as number
+      const fRid = fromRegionId;
+      const fDid = fromDistrictId;
+      const tRid = toRegionId;
       const route = await conversation.external(() =>
         prisma.route.upsert({
           where: {
@@ -117,12 +152,7 @@ export async function registrationConversation(
             },
           },
           update: {},
-          create: {
-            fromRegionId: fRid,
-            fromDistrictId: fDid,
-            toRegionId: tRid,
-            toDistrictId,
-          },
+          create: { fromRegionId: fRid, fromDistrictId: fDid, toRegionId: tRid, toDistrictId },
         })
       );
       if (!selectedRouteIds.includes(route.id)) {
@@ -132,12 +162,10 @@ export async function registrationConversation(
       toRegionId = null;
       await ctx.reply("Marshrut qo'shildi ✅\nYana marshrut qo'shishni xohlaysizmi?", {
         reply_markup: {
-          inline_keyboard: [
-            [
-              { text: "➕ Yana marshrut qo'shish", callback_data: "reg_more" },
-              { text: "✅ Tayyor", callback_data: "reg_done" },
-            ],
-          ],
+          inline_keyboard: [[
+            { text: "➕ Yana marshrut qo'shish", callback_data: "reg_more" },
+            { text: "✅ Tayyor", callback_data: "reg_done" },
+          ]],
         },
       });
     } else if (data === "reg_more") {
@@ -176,9 +204,9 @@ export async function registrationConversation(
     });
   }
 
-  const { mainKeyboard } = await import("../keyboards/main.js");
+  const { driverKeyboard } = await import("../keyboards/main.js");
   await ctx.reply(
     `✅ Ro'yxatdan o'tdingiz! ${selectedRouteIds.length} ta marshrut saqlandi.`,
-    { reply_markup: mainKeyboard }
+    { reply_markup: driverKeyboard }
   );
 }

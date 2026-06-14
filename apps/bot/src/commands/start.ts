@@ -1,6 +1,6 @@
 import { Bot } from "grammy";
 import { prisma } from "@taxi/db";
-import { mainKeyboard } from "../keyboards/main.js";
+import { driverKeyboard, passengerKeyboard } from "../keyboards/main.js";
 import type { MyContext } from "../bot.js";
 
 export function registerStartCommand(bot: Bot<MyContext>) {
@@ -9,16 +9,11 @@ export function registerStartCommand(bot: Bot<MyContext>) {
     const user = await prisma.user.findUnique({ where: { telegramId } });
 
     if (user) {
-      await ctx.reply(`Xush kelibsiz, ${user.name}!`, { reply_markup: mainKeyboard });
+      const kb = user.role === "DRIVER" ? driverKeyboard : passengerKeyboard;
+      await ctx.reply(`Xush kelibsiz, ${user.name}!`, { reply_markup: kb });
     } else {
-      const name = [ctx.from?.first_name, ctx.from?.last_name]
-        .filter(Boolean)
-        .join(" ");
-
-      await prisma.user.create({
-        data: { telegramId, name, role: "DRIVER" },
-      });
-
+      const name = [ctx.from?.first_name, ctx.from?.last_name].filter(Boolean).join(" ");
+      await prisma.user.create({ data: { telegramId, name, role: "PASSENGER" } });
       await ctx.conversation.enter("registration");
     }
   });

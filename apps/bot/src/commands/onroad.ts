@@ -1,6 +1,6 @@
 import { Bot } from "grammy";
 import { prisma } from "@taxi/db";
-import { mainKeyboard } from "../keyboards/main.js";
+import { driverKeyboard } from "../keyboards/main.js";
 import type { MyContext } from "../bot.js";
 
 export function registerOnroadCommands(bot: Bot<MyContext>) {
@@ -20,6 +20,6 @@ export function registerOnroadCommands(bot: Bot<MyContext>) {
     await prisma.driver.update({ where: { userId: user.id }, data: { isOnRoad: false } });
     await prisma.driverOnRoad.deleteMany({ where: { driverId: user.id } });
 
-    await ctx.reply("🔴 Yo'ldan chiqdingiz.", { reply_markup: mainKeyboard });
+    await ctx.reply("🔴 Yo'ldan chiqdingiz.", { reply_markup: driverKeyboard });
   });
 }

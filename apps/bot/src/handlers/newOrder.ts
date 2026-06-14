@@ -23,6 +23,24 @@ export function registerOrderHandlers(bot: Bot<MyContext>) {
       create: { orderId, driverId: user.id, price: order.price },
     });
 
+    // Notify passenger
+    const fullOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { passenger: true },
+    });
+    if (fullOrder?.passenger) {
+      await ctx.api.sendMessage(
+        fullOrder.passenger.telegramId.toString(),
+        `💼 Yangi taklif!\n\n👤 Haydovchi: ${user.name}\n💰 Narx: ${order.price.toLocaleString()} so'm`,
+        {
+          reply_markup: new InlineKeyboard().text(
+            "Takliflarni ko'rish",
+            `order_offers:${orderId}`
+          ),
+        }
+      );
+    }
+
     await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() });
     await ctx.answerCallbackQuery("✅ Taklifingiz yuborildi!");
     await ctx.reply("✅ Taklifingiz yuborildi. Yo'lovchi siz bilan bog'lanadi.");

@@ -1,4 +1,4 @@
-import { Bot } from "grammy";
+import { Bot, InlineKeyboard } from "grammy";
 import { prisma } from "@taxi/db";
 import type { MyContext } from "../bot.js";
 
@@ -32,5 +32,23 @@ export function registerOfferPriceHandler(bot: Bot<MyContext>) {
 
     ctx.session.pendingOfferOrderId = undefined;
     await ctx.reply(`✅ Taklifingiz yuborildi: ${price.toLocaleString()} so'm`);
+
+    // Notify passenger
+    const fullOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { passenger: true },
+    });
+    if (fullOrder?.passenger) {
+      await ctx.api.sendMessage(
+        fullOrder.passenger.telegramId.toString(),
+        `💼 Yangi taklif!\n\n👤 Haydovchi: ${user.name}\n💰 Narx: ${price.toLocaleString()} so'm`,
+        {
+          reply_markup: new InlineKeyboard().text(
+            "Takliflarni ko'rish",
+            `order_offers:${orderId}`
+          ),
+        }
+      );
+    }
   });
 }

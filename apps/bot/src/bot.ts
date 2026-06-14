@@ -7,11 +7,13 @@ import { REDIS_KEYS } from "@taxi/shared";
 import { registrationConversation } from "./conversations/registration.js";
 import { addRouteConversation } from "./conversations/addRoute.js";
 import { onroadConversation } from "./conversations/onroad.js";
+import { createOrderConversation } from "./conversations/createOrder.js";
 
 import { registerStartCommand } from "./commands/start.js";
 import { registerRoutesCommand } from "./commands/routes.js";
 import { registerOnroadCommands } from "./commands/onroad.js";
 import { registerProfileCommand } from "./commands/profile.js";
+import { registerPassengerOrderCommands } from "./commands/orders.js";
 
 import { registerOrderHandlers } from "./handlers/newOrder.js";
 import { registerOfferPriceHandler } from "./handlers/offerPrice.js";
@@ -79,6 +81,7 @@ bot.use(async (ctx, next) => {
 });
 bot.use(createConversation(addRouteConversation, "addRoute"));
 bot.use(createConversation(onroadConversation, "onroad"));
+bot.use(createConversation(createOrderConversation, "createOrder"));
 
 registerStartCommand(bot);
 registerRoutesCommand(bot);
@@ -87,6 +90,7 @@ registerProfileCommand(bot);
 registerOrderHandlers(bot);
 registerOfferPriceHandler(bot);
 registerSurveyHandler(bot);
+registerPassengerOrderCommands(bot);
 
 // Bot instance for workers to send messages
 async function botSendOrderMessage(telegramId: string, text: string, orderId: number) {
