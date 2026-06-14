@@ -11,7 +11,9 @@ export function createSurveyWorker(
     async () => {
       const routes = await prisma.route.findMany({
         include: {
+          fromRegion: true,
           fromDistrict: true,
+          toRegion: true,
           toDistrict: true,
           driverRoutes: { include: { driver: { include: { user: true } } } },
         },
@@ -24,7 +26,7 @@ export function createSurveyWorker(
 
         const text =
           `📊 Narx so'rovi\n\n` +
-          `${route.fromDistrict.name} → ${route.toDistrict.name} yo'nalishi uchun\n` +
+          `${route.fromDistrict?.name ?? route.fromRegion.name + " (barchasi)"} → ${route.toDistrict?.name ?? route.toRegion.name + " (barchasi)"} yo'nalishi uchun\n` +
           `hozirgi narxingiz qanday? (so'mda)`;
 
         for (const driver of shuffled) {

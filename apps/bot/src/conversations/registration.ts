@@ -36,6 +36,8 @@ export async function registrationConversation(
 
   const selectedRouteIds: number[] = [];
   let fromDistrictId: number | null = null;
+  let fromRegionId: number | null = null;
+  let toRegionId: number | null = null;
 
   await ctx.reply("Qaysi viloyatdan chiqasiz? (1-qadam)", {
     reply_markup: {
@@ -52,11 +54,12 @@ export async function registrationConversation(
     await cbCtx.answerCallbackQuery();
 
     if (data.startsWith("reg_fromreg:")) {
-      const fromRegionId = Number(data.split(":")[1]);
-      const fromRegion = regions.find((r) => r.id === fromRegionId)!;
+      fromRegionId = Number(data.split(":")[1]);
+      const fRid = fromRegionId;
+      const fromRegion = regions.find((r) => r.id === fRid)!;
       const districts = await conversation.external(() =>
         prisma.district.findMany({
-          where: { regionId: fromRegionId },
+          where: { regionId: fRid },
           orderBy: { name: "asc" },
         })
       );
@@ -79,11 +82,12 @@ export async function registrationConversation(
         },
       });
     } else if (data.startsWith("reg_toreg:")) {
-      const toRegionId = Number(data.split(":")[1]);
-      const toRegion = regions.find((r) => r.id === toRegionId)!;
+      toRegionId = Number(data.split(":")[1]);
+      const tRid = toRegionId;
+      const toRegion = regions.find((r) => r.id === tRid)!;
       const districts = await conversation.external(() =>
         prisma.district.findMany({
-          where: { regionId: toRegionId },
+          where: { regionId: tRid },
           orderBy: { name: "asc" },
         })
       );
@@ -97,24 +101,35 @@ export async function registrationConversation(
           ),
         },
       });
-    } else if (data.startsWith("reg_to:") && fromDistrictId !== null) {
+    } else if (data.startsWith("reg_to:") && fromDistrictId !== null && fromRegionId !== null && toRegionId !== null) {
       const toDistrictId = Number(data.split(":")[1]);
+      const fRid = fromRegionId;   // captured as number (narrowed by the null checks above)
+      const fDid = fromDistrictId; // captured as number
+      const tRid = toRegionId;     // captured as number
       const route = await conversation.external(() =>
         prisma.route.upsert({
           where: {
-            fromDistrictId_toDistrictId: {
-              fromDistrictId: fromDistrictId!,
+            fromRegionId_fromDistrictId_toRegionId_toDistrictId: {
+              fromRegionId: fRid,
+              fromDistrictId: fDid,
+              toRegionId: tRid,
               toDistrictId,
             },
           },
           update: {},
-          create: { fromDistrictId: fromDistrictId!, toDistrictId },
+          create: {
+            fromRegionId: fRid,
+            fromDistrictId: fDid,
+            toRegionId: tRid,
+            toDistrictId,
+          },
         })
       );
       if (!selectedRouteIds.includes(route.id)) {
         selectedRouteIds.push(route.id);
       }
       fromDistrictId = null;
+      toRegionId = null;
       await ctx.reply("Marshrut qo'shildi ✅\nYana marshrut qo'shishni xohlaysizmi?", {
         reply_markup: {
           inline_keyboard: [
@@ -126,6 +141,8 @@ export async function registrationConversation(
         },
       });
     } else if (data === "reg_more") {
+      fromRegionId = null;
+      toRegionId = null;
       await ctx.reply("Qaysi viloyatdan chiqasiz?", {
         reply_markup: {
           inline_keyboard: toRows(

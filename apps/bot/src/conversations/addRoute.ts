@@ -51,23 +51,36 @@ export async function addRouteConversation(
     {
       parse_mode: "HTML",
       reply_markup: {
-        inline_keyboard: toRows(
-          fromDistricts.map((d) => ({ text: d.name, callback_data: `ar_from:${d.id}` })),
-          2
-        ),
+        inline_keyboard: [
+          [{ text: "Hammasi", callback_data: "ar_from_all" }],
+          ...toRows(
+            fromDistricts.map((d) => ({ text: d.name, callback_data: `ar_from:${d.id}` })),
+            2
+          ),
+        ],
       },
     }
   );
 
   let fromCtx = await conversation.waitFor("callback_query:data");
-  while (!fromCtx.callbackQuery.data.startsWith("ar_from:")) {
+  while (
+    !fromCtx.callbackQuery.data.startsWith("ar_from:") &&
+    fromCtx.callbackQuery.data !== "ar_from_all"
+  ) {
     await fromCtx.answerCallbackQuery();
     fromCtx = await conversation.waitFor("callback_query:data");
   }
-  const fromId = Number(fromCtx.callbackQuery.data.split(":")[1]);
   await fromCtx.answerCallbackQuery();
 
-  const fromDistrict = fromDistricts.find((d) => d.id === fromId)!;
+  let fromDistrictId: number | null;
+  let fromLabel: string;
+  if (fromCtx.callbackQuery.data === "ar_from_all") {
+    fromDistrictId = null;
+    fromLabel = `${fromRegion.name} (barchasi)`;
+  } else {
+    fromDistrictId = Number(fromCtx.callbackQuery.data.split(":")[1]);
+    fromLabel = fromDistricts.find((d) => d.id === fromDistrictId)!.name;
+  }
 
   const toRegionButtons = toRows(
     regions.map((r) => ({ text: r.name, callback_data: `ar_toreg:${r.id}` })),
@@ -77,7 +90,7 @@ export async function addRouteConversation(
   await ctx.api.editMessageText(
     ctx.chat!.id,
     msg.message_id,
-    `📍 <b>${fromDistrict.name}</b> dan — qaysi viloyatga borasiz?`,
+    `📍 <b>${fromLabel}</b> dan — qaysi viloyatga borasiz?`,
     {
       parse_mode: "HTML",
       reply_markup: { inline_keyboard: toRegionButtons },
@@ -104,29 +117,42 @@ export async function addRouteConversation(
   await ctx.api.editMessageText(
     ctx.chat!.id,
     msg.message_id,
-    `📍 <b>${fromDistrict.name} → ${toRegion.name}</b> — qaysi tuman/shahar?`,
+    `📍 <b>${fromLabel} → ${toRegion.name}</b> — qaysi tuman/shahar?`,
     {
       parse_mode: "HTML",
       reply_markup: {
-        inline_keyboard: toRows(
-          toDistricts
-            .filter((d) => d.id !== fromId)
-            .map((d) => ({ text: d.name, callback_data: `ar_to:${d.id}` })),
-          2
-        ),
+        inline_keyboard: [
+          [{ text: "Hammasi", callback_data: "ar_to_all" }],
+          ...toRows(
+            toDistricts
+              .filter((d) => d.id !== fromDistrictId)
+              .map((d) => ({ text: d.name, callback_data: `ar_to:${d.id}` })),
+            2
+          ),
+        ],
       },
     }
   );
 
   let toCtx = await conversation.waitFor("callback_query:data");
-  while (!toCtx.callbackQuery.data.startsWith("ar_to:")) {
+  while (
+    !toCtx.callbackQuery.data.startsWith("ar_to:") &&
+    toCtx.callbackQuery.data !== "ar_to_all"
+  ) {
     await toCtx.answerCallbackQuery();
     toCtx = await conversation.waitFor("callback_query:data");
   }
-  const toId = Number(toCtx.callbackQuery.data.split(":")[1]);
   await toCtx.answerCallbackQuery();
 
-  const toDistrict = toDistricts.find((d) => d.id === toId)!;
+  let toDistrictId: number | null;
+  let toLabel: string;
+  if (toCtx.callbackQuery.data === "ar_to_all") {
+    toDistrictId = null;
+    toLabel = `${toRegion.name} (barchasi)`;
+  } else {
+    toDistrictId = Number(toCtx.callbackQuery.data.split(":")[1]);
+    toLabel = toDistricts.find((d) => d.id === toDistrictId)!.name;
+  }
 
   await conversation.external(async () => {
     const telegramId = BigInt(ctx.from!.id);
@@ -136,17 +162,21 @@ export async function addRouteConversation(
     const driver = await prisma.driver.findUnique({ where: { userId: user.id } });
     if (!driver) return;
 
+    const fwd = { fromRegionId, fromDistrictId, toRegionId, toDistrictId };
+    const rev = {
+      fromRegionId: toRegionId,
+      fromDistrictId: toDistrictId,
+      toRegionId: fromRegionId,
+      toDistrictId: fromDistrictId,
+    };
+
+    // prisma compound unique where rejects null — use findFirst+create instead
+    const findOrCreate = async (data: typeof fwd) =>
+      (await prisma.route.findFirst({ where: data })) ?? prisma.route.create({ data });
+
     const [route, reverseRoute] = await Promise.all([
-      prisma.route.upsert({
-        where: { fromDistrictId_toDistrictId: { fromDistrictId: fromId, toDistrictId: toId } },
-        update: {},
-        create: { fromDistrictId: fromId, toDistrictId: toId },
-      }),
-      prisma.route.upsert({
-        where: { fromDistrictId_toDistrictId: { fromDistrictId: toId, toDistrictId: fromId } },
-        update: {},
-        create: { fromDistrictId: toId, toDistrictId: fromId },
-      }),
+      findOrCreate(fwd),
+      findOrCreate(rev),
     ]);
 
     await Promise.all(
@@ -163,8 +193,8 @@ export async function addRouteConversation(
   await ctx.api.editMessageText(
     ctx.chat!.id,
     msg.message_id,
-    `✅ Marshrut qo'shildi: <b>${fromDistrict.name} → ${toDistrict.name}</b>\n` +
-      `↩️ Teskari marshrut ham qo'shildi: <b>${toDistrict.name} → ${fromDistrict.name}</b>`,
+    `✅ Marshrut qo'shildi: <b>${fromLabel} → ${toLabel}</b>\n` +
+      `↩️ Teskari marshrut ham qo'shildi: <b>${toLabel} → ${fromLabel}</b>`,
     { parse_mode: "HTML" }
   );
 }

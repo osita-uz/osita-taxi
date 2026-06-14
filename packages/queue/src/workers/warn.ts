@@ -15,7 +15,7 @@ export function createWarnWorker(
         where: { id: orderId },
         include: {
           passenger: true,
-          route: { include: { fromDistrict: true, toDistrict: true } },
+          route: { include: { fromRegion: true, fromDistrict: true, toRegion: true, toDistrict: true } },
         },
       });
 
@@ -30,7 +30,7 @@ export function createWarnWorker(
 
       const text =
         `⏳ Buyurtmangizga 15 daqiqa qoldi!\n` +
-        `${order.route.fromDistrict.name} → ${order.route.toDistrict.name} (${dateStr})`;
+        `${order.route.fromDistrict?.name ?? order.route.fromRegion.name + " (barchasi)"} → ${order.route.toDistrict?.name ?? order.route.toRegion.name + " (barchasi)"} (${dateStr})`;
 
       await botSendFn(
         order.passenger.telegramId.toString(),

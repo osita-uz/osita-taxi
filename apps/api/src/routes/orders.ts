@@ -50,7 +50,7 @@ export async function ordersRoutes(app: FastifyInstance) {
       return prisma.order.findMany({
         where: { passengerId: user.userId },
         orderBy: { createdAt: "desc" },
-        include: { route: { include: { fromDistrict: true, toDistrict: true } } },
+        include: { route: { include: { fromRegion: true, fromDistrict: true, toRegion: true, toDistrict: true } } },
       });
     }
   );

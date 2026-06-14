@@ -13,7 +13,7 @@ export async function onroadConversation(
     prisma.user.findUnique({
       where: { telegramId },
       include: {
-        driver: { include: { routes: { include: { route: { include: { fromDistrict: true, toDistrict: true } } } } } },
+        driver: { include: { routes: { include: { route: { include: { fromRegion: true, fromDistrict: true, toRegion: true, toDistrict: true } } } } } },
       },
     })
   );
@@ -23,12 +23,11 @@ export async function onroadConversation(
     return;
   }
 
-  const routeButtons = user.driver.routes.map((dr) => [
-    {
-      text: `${dr.route.fromDistrict.name} → ${dr.route.toDistrict.name}`,
-      callback_data: `onroad_route:${dr.routeId}`,
-    },
-  ]);
+  const routeButtons = user.driver.routes.map((dr) => {
+    const from = dr.route.fromDistrict?.name ?? `${dr.route.fromRegion.name} (barchasi)`;
+    const to = dr.route.toDistrict?.name ?? `${dr.route.toRegion.name} (barchasi)`;
+    return [{ text: `${from} → ${to}`, callback_data: `onroad_route:${dr.routeId}` }];
+  });
 
   await ctx.reply("Qaysi yo'nalishda borasiz?", {
     reply_markup: { inline_keyboard: routeButtons },

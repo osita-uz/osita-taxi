@@ -38,7 +38,7 @@ async function showRoutes(ctx: any) {
     include: {
       driver: {
         include: {
-          routes: { include: { route: { include: { fromDistrict: true, toDistrict: true } } } },
+          routes: { include: { route: { include: { fromRegion: true, fromDistrict: true, toRegion: true, toDistrict: true } } } },
         },
       },
     },
@@ -51,10 +51,9 @@ async function showRoutes(ctx: any) {
 
   const kb = new InlineKeyboard();
   for (const dr of user.driver.routes) {
-    kb.text(
-      `${dr.route.fromDistrict.name} → ${dr.route.toDistrict.name}`,
-      `noop`
-    )
+    const from = dr.route.fromDistrict?.name ?? `${dr.route.fromRegion.name} (barchasi)`;
+    const to = dr.route.toDistrict?.name ?? `${dr.route.toRegion.name} (barchasi)`;
+    kb.text(`${from} → ${to}`, `noop`)
       .text("❌", `route_delete:${dr.routeId}`)
       .row();
   }

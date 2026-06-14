@@ -70,17 +70,21 @@ model Driver {
 }
 
 model Route {
-  id             Int      @id @default(autoincrement())
-  fromDistrictId Int
-  toDistrictId   Int
-  fromDistrict   District @relation("FromDistrict", fields: [fromDistrictId], references: [id])
-  toDistrict     District @relation("ToDistrict", fields: [toDistrictId], references: [id])
+  id             Int       @id @default(autoincrement())
+  fromRegionId   Int
+  fromDistrictId Int?
+  toRegionId     Int
+  toDistrictId   Int?
+  fromRegion     Region    @relation("RouteFromRegion", fields: [fromRegionId], references: [id])
+  fromDistrict   District? @relation("FromDistrict", fields: [fromDistrictId], references: [id])
+  toRegion       Region    @relation("RouteToRegion", fields: [toRegionId], references: [id])
+  toDistrict     District? @relation("ToDistrict", fields: [toDistrictId], references: [id])
 
   driverRoutes DriverRoute[]
   orders       Order[]
   priceSurveys PriceSurvey[]
 
-  @@unique([fromDistrictId, toDistrictId])
+  @@unique([fromRegionId, fromDistrictId, toRegionId, toDistrictId])
 }
 
 model DriverRoute {
@@ -161,6 +165,8 @@ model Region {
   id        Int        @id
   name      String
   districts District[]
+  fromRoutes Route[]   @relation("RouteFromRegion")
+  toRoutes   Route[]   @relation("RouteToRegion")
 }
 
 model District {
