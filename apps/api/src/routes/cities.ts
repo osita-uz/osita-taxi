@@ -4,13 +4,24 @@ import { redis } from "@taxi/queue";
 import { REDIS_KEYS } from "@taxi/shared";
 
 export async function citiesRoutes(app: FastifyInstance) {
-  app.get("/cities", async () => {
-    return prisma.city.findMany({ orderBy: { name: "asc" } });
+  app.get("/regions", async () => {
+    return prisma.region.findMany({ orderBy: { id: "asc" } });
   });
+
+  app.get<{ Params: { regionId: string } }>(
+    "/regions/:regionId/districts",
+    async (request) => {
+      const regionId = Number(request.params.regionId);
+      return prisma.district.findMany({
+        where: { regionId },
+        orderBy: { name: "asc" },
+      });
+    }
+  );
 
   app.get<{ Params: { routeId: string } }>(
     "/routes/:routeId/stats",
-    async (request, reply) => {
+    async (request) => {
       const routeId = Number(request.params.routeId);
       const cached = await redis.get(REDIS_KEYS.routeStats(routeId));
 

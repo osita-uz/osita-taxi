@@ -15,7 +15,7 @@ async function sendOrderToDriver(
     luggage: string;
     price: number;
     isUrgent: boolean;
-    route: { fromCity: { name: string }; toCity: { name: string } };
+    route: { fromDistrict: { name: string }; toDistrict: { name: string } };
   },
   botSendFn: (telegramId: string, text: string, orderId: number) => Promise<void>
 ) {
@@ -36,7 +36,7 @@ async function sendOrderToDriver(
 
   const text =
     `🆕 Yangi buyurtma\n\n` +
-    `📍 ${order.route.fromCity.name}, ${order.fromPlace} → ${order.route.toCity.name}, ${order.toPlace}\n` +
+    `📍 ${order.route.fromDistrict.name}, ${order.fromPlace} → ${order.route.toDistrict.name}, ${order.toPlace}\n` +
     `📅 ${date}\n` +
     `💺 ${seat}${luggage}\n` +
     `💰 Mijoz narxi: ${order.price.toLocaleString()} so'm` +
@@ -57,7 +57,7 @@ export function createNotifyWorker(
 
       const order = await prisma.order.findUnique({
         where: { id: orderId },
-        include: { route: { include: { fromCity: true, toCity: true } } },
+        include: { route: { include: { fromDistrict: true, toDistrict: true } } },
       });
 
       if (!order || order.status !== "ACTIVE") return;

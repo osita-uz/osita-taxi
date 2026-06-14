@@ -69,27 +69,18 @@ model Driver {
   priceSurveys PriceSurvey[]
 }
 
-model City {
-  id   Int    @id @default(autoincrement())
-  name String @unique
-  slug String @unique
-
-  fromRoutes Route[] @relation("FromCity")
-  toRoutes   Route[] @relation("ToCity")
-}
-
 model Route {
-  id         Int  @id @default(autoincrement())
-  fromCityId Int
-  toCityId   Int
-  fromCity   City @relation("FromCity", fields: [fromCityId], references: [id])
-  toCity     City @relation("ToCity", fields: [toCityId], references: [id])
+  id             Int      @id @default(autoincrement())
+  fromDistrictId Int
+  toDistrictId   Int
+  fromDistrict   District @relation("FromDistrict", fields: [fromDistrictId], references: [id])
+  toDistrict     District @relation("ToDistrict", fields: [toDistrictId], references: [id])
 
   driverRoutes DriverRoute[]
   orders       Order[]
   priceSurveys PriceSurvey[]
 
-  @@unique([fromCityId, toCityId])
+  @@unique([fromDistrictId, toDistrictId])
 }
 
 model DriverRoute {
@@ -164,4 +155,20 @@ model PriceSurvey {
   price     Int
   source    PriceSource
   createdAt DateTime    @default(now())
+}
+
+model Region {
+  id        Int        @id
+  name      String
+  districts District[]
+}
+
+model District {
+  id       Int    @id
+  name     String
+  regionId Int
+  region   Region @relation(fields: [regionId], references: [id])
+
+  fromRoutes Route[] @relation("FromDistrict")
+  toRoutes   Route[] @relation("ToDistrict")
 }

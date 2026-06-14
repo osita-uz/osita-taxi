@@ -2,122 +2,147 @@ import { Conversation } from "@grammyjs/conversations";
 import { prisma } from "@taxi/db";
 import type { MyContext } from "../bot.js";
 
+function toRows<T>(items: T[], cols = 2): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += cols) {
+    rows.push(items.slice(i, i + cols));
+  }
+  return rows;
+}
+
 export async function registrationConversation(
   conversation: Conversation<MyContext>,
   ctx: MyContext
 ) {
-  await ctx.reply(
-    "Xush kelibsiz! Telefon raqamingizni ulashing:",
-    {
-      reply_markup: {
-        keyboard: [[{ text: "📱 Raqamni ulashish", request_contact: true }]],
-        resize_keyboard: true,
-        one_time_keyboard: true,
-      },
-    }
-  );
+  await ctx.reply("Xush kelibsiz! Telefon raqamingizni ulashing:", {
+    reply_markup: {
+      keyboard: [[{ text: "📱 Raqamni ulashish", request_contact: true }]],
+      resize_keyboard: true,
+      one_time_keyboard: true,
+    },
+  });
 
   const contactCtx = await conversation.waitFor("message:contact");
   const phone = contactCtx.message.contact.phone_number;
   const telegramId = BigInt(ctx.from!.id);
 
   await conversation.external(async () => {
-    await prisma.user.update({
-      where: { telegramId },
-      data: { phone },
-    });
+    await prisma.user.update({ where: { telegramId }, data: { phone } });
   });
 
-  const cities = await conversation.external(() =>
-    prisma.city.findMany({ orderBy: { name: "asc" } })
+  const regions = await conversation.external(() =>
+    prisma.region.findMany({ orderBy: { id: "asc" } })
   );
 
   const selectedRouteIds: number[] = [];
-  const selectedFromCityId: { value: number | null } = { value: null };
+  let fromDistrictId: number | null = null;
 
-  await ctx.reply(
-    "Qaysi shahardan chiqasiz? (Marshrut tanlash: 1-qadam)",
-    {
-      reply_markup: {
-        inline_keyboard: cities.map((c) => [
-          { text: c.name, callback_data: `reg_from:${c.id}` },
-        ]),
-      },
-    }
-  );
+  await ctx.reply("Qaysi viloyatdan chiqasiz? (1-qadam)", {
+    reply_markup: {
+      inline_keyboard: toRows(
+        regions.map((r) => ({ text: r.name, callback_data: `reg_fromreg:${r.id}` })),
+        1
+      ),
+    },
+  });
 
   while (true) {
     const cbCtx = await conversation.waitFor("callback_query:data");
     const data = cbCtx.callbackQuery.data;
+    await cbCtx.answerCallbackQuery();
 
-    if (data.startsWith("reg_from:")) {
-      const fromId = Number(data.split(":")[1]);
-      selectedFromCityId.value = fromId;
-      await cbCtx.answerCallbackQuery();
-      await ctx.reply(
-        "Qaysi shaharga borasiz? (Marshrut tanlash: 2-qadam)",
-        {
-          reply_markup: {
-            inline_keyboard: cities
-              .filter((c) => c.id !== fromId)
-              .map((c) => [
-                { text: c.name, callback_data: `reg_to:${c.id}` },
-              ]),
-          },
-        }
-      );
-    } else if (data.startsWith("reg_to:") && selectedFromCityId.value) {
-      const toId = Number(data.split(":")[1]);
-      const route = await conversation.external(() =>
-        prisma.route.findUnique({
-          where: {
-            fromCityId_toCityId: {
-              fromCityId: selectedFromCityId.value!,
-              toCityId: toId,
-            },
-          },
+    if (data.startsWith("reg_fromreg:")) {
+      const fromRegionId = Number(data.split(":")[1]);
+      const fromRegion = regions.find((r) => r.id === fromRegionId)!;
+      const districts = await conversation.external(() =>
+        prisma.district.findMany({
+          where: { regionId: fromRegionId },
+          orderBy: { name: "asc" },
         })
       );
-      if (route && !selectedRouteIds.includes(route.id)) {
+      await ctx.reply(`📍 ${fromRegion.name} — qaysi tuman/shahar?`, {
+        reply_markup: {
+          inline_keyboard: toRows(
+            districts.map((d) => ({ text: d.name, callback_data: `reg_from:${d.id}` })),
+            2
+          ),
+        },
+      });
+    } else if (data.startsWith("reg_from:")) {
+      fromDistrictId = Number(data.split(":")[1]);
+      await ctx.reply("Qaysi viloyatga borasiz? (2-qadam)", {
+        reply_markup: {
+          inline_keyboard: toRows(
+            regions.map((r) => ({ text: r.name, callback_data: `reg_toreg:${r.id}` })),
+            1
+          ),
+        },
+      });
+    } else if (data.startsWith("reg_toreg:")) {
+      const toRegionId = Number(data.split(":")[1]);
+      const toRegion = regions.find((r) => r.id === toRegionId)!;
+      const districts = await conversation.external(() =>
+        prisma.district.findMany({
+          where: { regionId: toRegionId },
+          orderBy: { name: "asc" },
+        })
+      );
+      await ctx.reply(`📍 ${toRegion.name} — qaysi tuman/shahar?`, {
+        reply_markup: {
+          inline_keyboard: toRows(
+            districts
+              .filter((d) => d.id !== fromDistrictId)
+              .map((d) => ({ text: d.name, callback_data: `reg_to:${d.id}` })),
+            2
+          ),
+        },
+      });
+    } else if (data.startsWith("reg_to:") && fromDistrictId !== null) {
+      const toDistrictId = Number(data.split(":")[1]);
+      const route = await conversation.external(() =>
+        prisma.route.upsert({
+          where: {
+            fromDistrictId_toDistrictId: {
+              fromDistrictId: fromDistrictId!,
+              toDistrictId,
+            },
+          },
+          update: {},
+          create: { fromDistrictId: fromDistrictId!, toDistrictId },
+        })
+      );
+      if (!selectedRouteIds.includes(route.id)) {
         selectedRouteIds.push(route.id);
       }
-      await cbCtx.answerCallbackQuery("Marshrut qo'shildi ✅");
-      await ctx.reply(
-        `Marshrut qo'shildi. Yana qo'shishni xohlaysizmi?`,
-        {
-          reply_markup: {
-            inline_keyboard: [
-              [
-                { text: "➕ Yana marshrut qo'shish", callback_data: "reg_more" },
-                { text: "✅ Tayyor", callback_data: "reg_done" },
-              ],
+      fromDistrictId = null;
+      await ctx.reply("Marshrut qo'shildi ✅\nYana marshrut qo'shishni xohlaysizmi?", {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: "➕ Yana marshrut qo'shish", callback_data: "reg_more" },
+              { text: "✅ Tayyor", callback_data: "reg_done" },
             ],
-          },
-        }
-      );
+          ],
+        },
+      });
     } else if (data === "reg_more") {
-      selectedFromCityId.value = null;
-      await cbCtx.answerCallbackQuery();
-      await ctx.reply(
-        "Qaysi shahardan chiqasiz?",
-        {
-          reply_markup: {
-            inline_keyboard: cities.map((c) => [
-              { text: c.name, callback_data: `reg_from:${c.id}` },
-            ]),
-          },
-        }
-      );
+      await ctx.reply("Qaysi viloyatdan chiqasiz?", {
+        reply_markup: {
+          inline_keyboard: toRows(
+            regions.map((r) => ({ text: r.name, callback_data: `reg_fromreg:${r.id}` })),
+            1
+          ),
+        },
+      });
     } else if (data === "reg_done") {
-      await cbCtx.answerCallbackQuery();
       break;
     }
   }
 
   if (selectedRouteIds.length > 0) {
-    const driverUserId = await conversation.external(async () => {
+    await conversation.external(async () => {
       const user = await prisma.user.findUnique({ where: { telegramId } });
-      if (!user) return null;
+      if (!user) return;
       await prisma.user.update({ where: { id: user.id }, data: { role: "DRIVER" } });
       const driver = await prisma.driver.upsert({
         where: { userId: user.id },
@@ -131,7 +156,6 @@ export async function registrationConversation(
           create: { driverId: driver.userId, routeId },
         });
       }
-      return driver.userId;
     });
   }
 

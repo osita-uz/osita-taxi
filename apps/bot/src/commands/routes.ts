@@ -27,7 +27,7 @@ export function registerRoutesCommand(bot: Bot<MyContext>) {
 
   bot.callbackQuery("route_add", async (ctx) => {
     await ctx.answerCallbackQuery();
-    await ctx.conversation.enter("addRoute");
+    await ctx.conversation.enter("addRoute", { overwrite: true });
   });
 }
 
@@ -38,7 +38,7 @@ async function showRoutes(ctx: any) {
     include: {
       driver: {
         include: {
-          routes: { include: { route: { include: { fromCity: true, toCity: true } } } },
+          routes: { include: { route: { include: { fromDistrict: true, toDistrict: true } } } },
         },
       },
     },
@@ -52,7 +52,7 @@ async function showRoutes(ctx: any) {
   const kb = new InlineKeyboard();
   for (const dr of user.driver.routes) {
     kb.text(
-      `${dr.route.fromCity.name} → ${dr.route.toCity.name}`,
+      `${dr.route.fromDistrict.name} → ${dr.route.toDistrict.name}`,
       `noop`
     )
       .text("❌", `route_delete:${dr.routeId}`)

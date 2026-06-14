@@ -13,7 +13,7 @@ export async function onroadConversation(
     prisma.user.findUnique({
       where: { telegramId },
       include: {
-        driver: { include: { routes: { include: { route: { include: { fromCity: true, toCity: true } } } } } },
+        driver: { include: { routes: { include: { route: { include: { fromDistrict: true, toDistrict: true } } } } } },
       },
     })
   );
@@ -25,7 +25,7 @@ export async function onroadConversation(
 
   const routeButtons = user.driver.routes.map((dr) => [
     {
-      text: `${dr.route.fromCity.name} → ${dr.route.toCity.name}`,
+      text: `${dr.route.fromDistrict.name} → ${dr.route.toDistrict.name}`,
       callback_data: `onroad_route:${dr.routeId}`,
     },
   ]);

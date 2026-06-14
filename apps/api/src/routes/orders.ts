@@ -50,7 +50,7 @@ export async function ordersRoutes(app: FastifyInstance) {
       return prisma.order.findMany({
         where: { passengerId: user.userId },
         orderBy: { createdAt: "desc" },
-        include: { route: { include: { fromCity: true, toCity: true } } },
+        include: { route: { include: { fromDistrict: true, toDistrict: true } } },
       });
     }
   );
@@ -65,7 +65,7 @@ export async function ordersRoutes(app: FastifyInstance) {
       const order = await prisma.order.findFirst({
         where: { id, passengerId: user.userId },
         include: {
-          route: { include: { fromCity: true, toCity: true } },
+          route: { include: { fromDistrict: true, toDistrict: true } },
           offers: { include: { driver: { include: { user: true } } } },
         },
       });

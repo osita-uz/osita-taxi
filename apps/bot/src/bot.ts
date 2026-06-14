@@ -71,6 +71,12 @@ bot.use(
 
 bot.use(conversations());
 bot.use(createConversation(registrationConversation, "registration"));
+bot.use(async (ctx, next) => {
+  if (ctx.callbackQuery?.data === "route_add") {
+    await ctx.conversation.exit("addRoute");
+  }
+  await next();
+});
 bot.use(createConversation(addRouteConversation, "addRoute"));
 bot.use(createConversation(onroadConversation, "onroad"));
 
@@ -122,6 +128,10 @@ const statsWorker = createStatsWorker();
 ordersExpiryQueue.add("cron", {}, { repeat: { every: 60_000 } }); // every 1 min
 priceSurveyQueue.add("cron", {}, { repeat: { pattern: "0 8 * * *", tz: "Asia/Tashkent" } }); // 08:00 UZT
 priceStatsQueue.add("cron", {}, { repeat: { every: 6 * 60 * 60_000 } }); // every 6h
+
+bot.catch((err) => {
+  console.error("Bot error:", err.message, err.error);
+});
 
 bot.start({
   onStart: () => console.log("Bot started!"),

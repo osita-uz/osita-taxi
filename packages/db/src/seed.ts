@@ -6,62 +6,322 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-const CITIES = [
-  { name: "Toshkent", slug: "toshkent" },
-  { name: "Samarqand", slug: "samarqand" },
-  { name: "Buxoro", slug: "buxoro" },
-  { name: "Namangan", slug: "namangan" },
-  { name: "Andijon", slug: "andijon" },
-  { name: "Farg'ona", slug: "fargona" },
-  { name: "Qarshi", slug: "qarshi" },
-  { name: "Termiz", slug: "termiz" },
-  { name: "Nukus", slug: "nukus" },
-  { name: "Urganch", slug: "urganch" },
-  { name: "Jizzax", slug: "jizzax" },
-  { name: "Navoiy", slug: "navoiy" },
-  { name: "Sirdaryo", slug: "sirdaryo" },
-  { name: "Guliston", slug: "guliston" },
-  { name: "Muborak", slug: "muborak" },
+
+const REGIONS = [
+  { id: 10, name: "Toshkent shahri" },
+  { id: 11, name: "Toshkent viloyati" },
+  { id: 12, name: "Sirdaryo viloyati" },
+  { id: 13, name: "Jizzax viloyati" },
+  { id: 14, name: "Samarqand viloyati" },
+  { id: 15, name: "Farg'ona viloyati" },
+  { id: 16, name: "Namangan viloyati" },
+  { id: 17, name: "Andijon viloyati" },
+  { id: 18, name: "Qashqadaryo viloyati" },
+  { id: 19, name: "Surxondaryo viloyati" },
+  { id: 20, name: "Buxoro viloyati" },
+  { id: 21, name: "Navoiy viloyati" },
+  { id: 22, name: "Xorazm viloyati" },
+  { id: 23, name: "Qoraqalpog'iston Respublikasi" },
+];
+
+const DISTRICTS = [
+  // Toshkent shahri (10)
+  { id: 1001, name: "Uchtepa tumani", regionId: 10 },
+  { id: 1002, name: "Sobir Rahimov tumani", regionId: 10 },
+  { id: 1003, name: "Mirzo Ulug'bek tumani", regionId: 10 },
+  { id: 1005, name: "Yakkasaroy tumani", regionId: 10 },
+  { id: 1006, name: "Shayxontohur tumani", regionId: 10 },
+  { id: 1007, name: "Chilonzor tumani", regionId: 10 },
+  { id: 1008, name: "Sirg'ali tumani", regionId: 10 },
+  { id: 1009, name: "Mirobod tumani", regionId: 10 },
+  { id: 1010, name: "Yunusobod tumani", regionId: 10 },
+  { id: 1011, name: "Bektemir tumani", regionId: 10 },
+  { id: 1012, name: "Olmazor tumani", regionId: 10 },
+  { id: 739001080, name: "Yashnobod tumani", regionId: 10 },
+  { id: 739001160, name: "Yangihayot tumani", regionId: 10 },
+
+  // Toshkent viloyati (11)
+  { id: 1101, name: "Yangiyo'l tumani", regionId: 11 },
+  { id: 1102, name: "Zangiota tumani", regionId: 11 },
+  { id: 1103, name: "Piskent tumani", regionId: 11 },
+  { id: 1104, name: "Parkent tumani", regionId: 11 },
+  { id: 1105, name: "O'rtachirchiq tumani", regionId: 11 },
+  { id: 1106, name: "Oqqo'rg'on tumani", regionId: 11 },
+  { id: 1107, name: "Quyichirchiq tumani", regionId: 11 },
+  { id: 1108, name: "Qibray tumani", regionId: 11 },
+  { id: 1109, name: "Toshkent tumani", regionId: 11 },
+  { id: 1110, name: "Ohangaron tumani", regionId: 11 },
+  { id: 1111, name: "Bekobod tumani", regionId: 11 },
+  { id: 1112, name: "Bo'stonliq tumani", regionId: 11 },
+  { id: 1113, name: "Bo'ka tumani", regionId: 11 },
+  { id: 1114, name: "Yuqorichirchiq tumani", regionId: 11 },
+  { id: 1115, name: "Chinoz tumani", regionId: 11 },
+  { id: 1116, name: "Angren shahri", regionId: 11 },
+  { id: 1117, name: "Bekobod shahri", regionId: 11 },
+  { id: 1118, name: "Olmalik shahri", regionId: 11 },
+  { id: 1119, name: "Ohangaron shahri", regionId: 11 },
+  { id: 1120, name: "Chirchiq shahri", regionId: 11 },
+  { id: 1121, name: "Yangiobod shahri", regionId: 11 },
+  { id: 1122, name: "Yangiyo'l shahri", regionId: 11 },
+  { id: 739001120, name: "Nurafshon shahri", regionId: 11 },
+  { id: 739001121, name: "Ohangaron shahri (yangi)", regionId: 11 },
+
+  // Sirdaryo viloyati (12)
+  { id: 1201, name: "Sayxunobod tumani", regionId: 12 },
+  { id: 1202, name: "Guliston tumani", regionId: 12 },
+  { id: 1203, name: "Boyovut tumani", regionId: 12 },
+  { id: 1204, name: "Mehnatobod tumani", regionId: 12 },
+  { id: 1205, name: "Xovos tumani", regionId: 12 },
+  { id: 1206, name: "Mirzaobod tumani", regionId: 12 },
+  { id: 1207, name: "Oqoltin tumani", regionId: 12 },
+  { id: 1209, name: "Sirdaryo tumani", regionId: 12 },
+  { id: 1210, name: "Guliston shahri", regionId: 12 },
+  { id: 1211, name: "Sirdaryo shahri", regionId: 12 },
+  { id: 1212, name: "Shirin shahri", regionId: 12 },
+  { id: 1213, name: "Yangiyer shahri", regionId: 12 },
+  { id: 1214, name: "Baxt shahri", regionId: 12 },
+  { id: 1215, name: "Sardoba tumani", regionId: 12 },
+
+  // Jizzax viloyati (13)
+  { id: 1301, name: "Zarbdor tumani", regionId: 13 },
+  { id: 1302, name: "Do'stlik tumani", regionId: 13 },
+  { id: 1304, name: "Forish tumani", regionId: 13 },
+  { id: 1305, name: "Jizzax tumani", regionId: 13 },
+  { id: 1306, name: "G'allaorol tumani", regionId: 13 },
+  { id: 1307, name: "Baxmal tumani", regionId: 13 },
+  { id: 1308, name: "Paxtakor tumani", regionId: 13 },
+  { id: 1309, name: "Zafarobod tumani", regionId: 13 },
+  { id: 1310, name: "Arnasoy tumani", regionId: 13 },
+  { id: 1311, name: "Zomin tumani", regionId: 13 },
+  { id: 1312, name: "Mirzacho'l tumani", regionId: 13 },
+  { id: 1313, name: "Yangiobod tumani", regionId: 13 },
+  { id: 1314, name: "Jizzax shahri", regionId: 13 },
+  { id: 739001100, name: "Sharof Rashidov tumani", regionId: 13 },
+
+  // Samarqand viloyati (14)
+  { id: 1401, name: "Narpay tumani", regionId: 14 },
+  { id: 1402, name: "Nurobod tumani", regionId: 14 },
+  { id: 1403, name: "Jomboy tumani", regionId: 14 },
+  { id: 1404, name: "Urgut tumani", regionId: 14 },
+  { id: 1405, name: "Paxtachi tumani", regionId: 14 },
+  { id: 1406, name: "Kattaqo'rg'on tumani", regionId: 14 },
+  { id: 1407, name: "Oqdaryo tumani", regionId: 14 },
+  { id: 1408, name: "Ishtixon tumani", regionId: 14 },
+  { id: 1409, name: "Pastdarg'om tumani", regionId: 14 },
+  { id: 1410, name: "Tayloq tumani", regionId: 14 },
+  { id: 1411, name: "Bulung'ur tumani", regionId: 14 },
+  { id: 1412, name: "Go'zalkent tumani", regionId: 14 },
+  { id: 1413, name: "Samarqand tumani", regionId: 14 },
+  { id: 1414, name: "Qo'shrabod tumani", regionId: 14 },
+  { id: 1415, name: "Payariq tumani", regionId: 14 },
+  { id: 1416, name: "Chelak tumani", regionId: 14 },
+  { id: 1417, name: "Samarqand shahri", regionId: 14 },
+  { id: 1418, name: "Bog'ishamol tumani", regionId: 14 },
+  { id: 1419, name: "Temiryo'l tumani", regionId: 14 },
+  { id: 1420, name: "Oqtosh shahri", regionId: 14 },
+  { id: 1421, name: "Kattaqo'rg'on shahri", regionId: 14 },
+  { id: 1422, name: "Urgut shahri", regionId: 14 },
+  { id: 1423, name: "Siyob tumani", regionId: 14 },
+
+  // Farg'ona viloyati (15)
+  { id: 1501, name: "Kirguli tumani", regionId: 15 },
+  { id: 1502, name: "Farg'ona tumani", regionId: 15 },
+  { id: 1503, name: "Quva tumani", regionId: 15 },
+  { id: 1504, name: "Toshloq tumani", regionId: 15 },
+  { id: 1505, name: "Oxunboboev tumani", regionId: 15 },
+  { id: 1506, name: "Yozyovon tumani", regionId: 15 },
+  { id: 1507, name: "Oltiariq tumani", regionId: 15 },
+  { id: 1508, name: "Bog'dod tumani", regionId: 15 },
+  { id: 1509, name: "Buvayda tumani", regionId: 15 },
+  { id: 1510, name: "Uchko'prik tumani", regionId: 15 },
+  { id: 1511, name: "Rishton tumani", regionId: 15 },
+  { id: 1512, name: "Dang'ara tumani", regionId: 15 },
+  { id: 1513, name: "Furqat tumani", regionId: 15 },
+  { id: 1514, name: "O'zbekiston tumani", regionId: 15 },
+  { id: 1515, name: "Beshariq tumani", regionId: 15 },
+  { id: 1516, name: "So'x tumani", regionId: 15 },
+  { id: 1517, name: "Quvasoy shahri", regionId: 15 },
+  { id: 1518, name: "Quva shahri", regionId: 15 },
+  { id: 1519, name: "Qo'qon shahri", regionId: 15 },
+  { id: 1520, name: "Marg'ilon shahri", regionId: 15 },
+  { id: 1521, name: "Farg'ona shahri", regionId: 15 },
+  { id: 1522, name: "Kirguli shahri", regionId: 15 },
+  { id: 2434, name: "Qo'shtepa tumani", regionId: 15 },
+
+  // Namangan viloyati (16)
+  { id: 1601, name: "Davlatobod tumani", regionId: 16 },
+  { id: 1602, name: "Mingbuloq tumani", regionId: 16 },
+  { id: 1603, name: "Namangan tumani", regionId: 16 },
+  { id: 1604, name: "Norin tumani", regionId: 16 },
+  { id: 1605, name: "Uychi tumani", regionId: 16 },
+  { id: 1606, name: "Uchqo'rg'on tumani", regionId: 16 },
+  { id: 1607, name: "Chortoq tumani", regionId: 16 },
+  { id: 1608, name: "Yangiqo'rg'on tumani", regionId: 16 },
+  { id: 1609, name: "Kosonsoy tumani", regionId: 16 },
+  { id: 1610, name: "Chust tumani", regionId: 16 },
+  { id: 1611, name: "Pop tumani", regionId: 16 },
+  { id: 1612, name: "To'raqo'rg'on tumani", regionId: 16 },
+  { id: 1613, name: "Namangan shahri", regionId: 16 },
+  { id: 1614, name: "Kosonsoy shahri", regionId: 16 },
+  { id: 1615, name: "Uchqo'rg'on shahri", regionId: 16 },
+  { id: 1616, name: "Chortoq shahri", regionId: 16 },
+  { id: 1617, name: "Chust shahri", regionId: 16 },
+  { id: 1618, name: "Xaqqulobod shahri", regionId: 16 },
+
+  // Andijon viloyati (17)
+  { id: 1701, name: "Andijon tumani", regionId: 17 },
+  { id: 1702, name: "Oltinko'l tumani", regionId: 17 },
+  { id: 1703, name: "Asaka tumani", regionId: 17 },
+  { id: 1704, name: "Baliqchi tumani", regionId: 17 },
+  { id: 1705, name: "Bo'z tumani", regionId: 17 },
+  { id: 1706, name: "Ulug'nor tumani", regionId: 17 },
+  { id: 1707, name: "Shaxrixon tumani", regionId: 17 },
+  { id: 1708, name: "Qo'rg'ontepa tumani", regionId: 17 },
+  { id: 1709, name: "Jalaquduq tumani", regionId: 17 },
+  { id: 1710, name: "Xo'jaobod tumani", regionId: 17 },
+  { id: 1711, name: "Marhamat tumani", regionId: 17 },
+  { id: 1712, name: "Izboskan tumani", regionId: 17 },
+  { id: 1713, name: "Buloqboshi tumani", regionId: 17 },
+  { id: 1714, name: "Paxtaobod tumani", regionId: 17 },
+  { id: 1715, name: "Andijon shahri", regionId: 17 },
+  { id: 1716, name: "Asaka shahri", regionId: 17 },
+  { id: 1717, name: "Xonobod shahri", regionId: 17 },
+  { id: 1718, name: "Shahrixon shahri", regionId: 17 },
+  { id: 1719, name: "Qorasuv shahri", regionId: 17 },
+  { id: 739001140, name: "Bo'ston tumani", regionId: 17 },
+
+  // Qashqadaryo viloyati (18)
+  { id: 1801, name: "Chiroqchi tumani", regionId: 18 },
+  { id: 1802, name: "Koson tumani", regionId: 18 },
+  { id: 1803, name: "Shahrisabz tumani", regionId: 18 },
+  { id: 1804, name: "Dehqonobod tumani", regionId: 18 },
+  { id: 1805, name: "Qamashi tumani", regionId: 18 },
+  { id: 1806, name: "Yakkabog' tumani", regionId: 18 },
+  { id: 1807, name: "Baxoriston tumani", regionId: 18 },
+  { id: 1808, name: "G'uzor tumani", regionId: 18 },
+  { id: 1809, name: "Qarshi tumani", regionId: 18 },
+  { id: 1810, name: "Nishon tumani", regionId: 18 },
+  { id: 1811, name: "Kitob tumani", regionId: 18 },
+  { id: 1812, name: "Kasbi tumani", regionId: 18 },
+  { id: 1813, name: "Muborak tumani", regionId: 18 },
+  { id: 1814, name: "Mirishkor tumani", regionId: 18 },
+  { id: 1815, name: "Qarshi shahri", regionId: 18 },
+  { id: 1816, name: "Shahrisabz shahri", regionId: 18 },
+
+  // Surxondaryo viloyati (19)
+  { id: 1901, name: "Termiz tumani", regionId: 19 },
+  { id: 1902, name: "Boysun tumani", regionId: 19 },
+  { id: 1903, name: "Muzrabot tumani", regionId: 19 },
+  { id: 1904, name: "Sariosiyo tumani", regionId: 19 },
+  { id: 1905, name: "Sharg'un tumani", regionId: 19 },
+  { id: 1906, name: "Sho'rchi tumani", regionId: 19 },
+  { id: 1907, name: "Oltinsoy tumani", regionId: 19 },
+  { id: 1908, name: "Qumqo'rg'on tumani", regionId: 19 },
+  { id: 1909, name: "Jarqo'rg'on tumani", regionId: 19 },
+  { id: 1910, name: "Qiziriq tumani", regionId: 19 },
+  { id: 1911, name: "Angor tumani", regionId: 19 },
+  { id: 1912, name: "Sherobod tumani", regionId: 19 },
+  { id: 1913, name: "Uzun tumani", regionId: 19 },
+  { id: 1914, name: "Denov tumani", regionId: 19 },
+  { id: 1915, name: "Bandixon tumani", regionId: 19 },
+  { id: 1916, name: "Termiz shahri", regionId: 19 },
+  { id: 1917, name: "Denov shahri", regionId: 19 },
+
+  // Buxoro viloyati (20)
+  { id: 2001, name: "Romitan tumani", regionId: 20 },
+  { id: 2002, name: "Vobkent tumani", regionId: 20 },
+  { id: 2003, name: "Peshku tumani", regionId: 20 },
+  { id: 2004, name: "Olot tumani", regionId: 20 },
+  { id: 2005, name: "Jondor tumani", regionId: 20 },
+  { id: 2006, name: "Qorako'l tumani", regionId: 20 },
+  { id: 2007, name: "Shofirkon tumani", regionId: 20 },
+  { id: 2008, name: "Qorovulbozor tumani", regionId: 20 },
+  { id: 2009, name: "Gazli shahri", regionId: 20 },
+  { id: 2010, name: "Buxoro tumani", regionId: 20 },
+  { id: 2011, name: "Kogon tumani", regionId: 20 },
+  { id: 2012, name: "G'ijduvon tumani", regionId: 20 },
+  { id: 2013, name: "Buxoro shahri", regionId: 20 },
+  { id: 2014, name: "G'ijduvon shahri", regionId: 20 },
+  { id: 2015, name: "Kogon shahri", regionId: 20 },
+  { id: 2016, name: "F.Xo'jaev tumani", regionId: 20 },
+  { id: 2017, name: "To'qimachi tumani", regionId: 20 },
+
+  // Navoiy viloyati (21)
+  { id: 2101, name: "Uchquduq tumani", regionId: 21 },
+  { id: 2102, name: "Konimex tumani", regionId: 21 },
+  { id: 2104, name: "Tomdi tumani", regionId: 21 },
+  { id: 2105, name: "Navbahor tumani", regionId: 21 },
+  { id: 2106, name: "Navoiy tumani", regionId: 21 },
+  { id: 2107, name: "Nurota tumani", regionId: 21 },
+  { id: 2108, name: "Xatirchi tumani", regionId: 21 },
+  { id: 2109, name: "Qiziltepa tumani", regionId: 21 },
+  { id: 2110, name: "Karmana tumani", regionId: 21 },
+  { id: 2111, name: "Navoiy shahri", regionId: 21 },
+  { id: 2112, name: "Zarafshon shahri", regionId: 21 },
+  { id: 2113, name: "Uchquduq shahri", regionId: 21 },
+
+  // Xorazm viloyati (22)
+  { id: 2201, name: "Xazorasp tumani", regionId: 22 },
+  { id: 2202, name: "Yangiariq tumani", regionId: 22 },
+  { id: 2203, name: "Gurlan tumani", regionId: 22 },
+  { id: 2204, name: "Urganch tumani", regionId: 22 },
+  { id: 2205, name: "Shovot tumani", regionId: 22 },
+  { id: 2206, name: "Xonqa tumani", regionId: 22 },
+  { id: 2207, name: "Bog'ot tumani", regionId: 22 },
+  { id: 2208, name: "Yangibozor tumani", regionId: 22 },
+  { id: 2209, name: "Qo'shko'pir tumani", regionId: 22 },
+  { id: 2210, name: "Xiva tumani", regionId: 22 },
+  { id: 2211, name: "Urganch shahri", regionId: 22 },
+  { id: 2212, name: "Xiva shahri", regionId: 22 },
+  { id: 2213, name: "Pitnak shahri", regionId: 22 },
+  { id: 739001141, name: "Tuproqqal'a tumani", regionId: 22 },
+
+  // Qoraqalpog'iston Respublikasi (23)
+  { id: 2301, name: "Nukus tumani", regionId: 23 },
+  { id: 2302, name: "Kungirot tumani", regionId: 23 },
+  { id: 2303, name: "Mo'ynoq tumani", regionId: 23 },
+  { id: 2305, name: "To'rtko'l tumani", regionId: 23 },
+  { id: 2306, name: "Ellikqal'a tumani", regionId: 23 },
+  { id: 2307, name: "Kegeyli tumani", regionId: 23 },
+  { id: 2308, name: "Amudaryo tumani", regionId: 23 },
+  { id: 2309, name: "Beruniy tumani", regionId: 23 },
+  { id: 2310, name: "Kanlikol tumani", regionId: 23 },
+  { id: 2311, name: "Chimboy tumani", regionId: 23 },
+  { id: 2312, name: "Shumanay tumani", regionId: 23 },
+  { id: 2313, name: "Taxtako'pir tumani", regionId: 23 },
+  { id: 2314, name: "Xojeli tumani", regionId: 23 },
+  { id: 2315, name: "Bozatau tumani", regionId: 23 },
+  { id: 2316, name: "Qorauzoq tumani", regionId: 23 },
+  { id: 2317, name: "Nukus shahri", regionId: 23 },
+  { id: 2318, name: "Beruniy shahri", regionId: 23 },
+  { id: 2319, name: "Kungirot shahri", regionId: 23 },
+  { id: 2320, name: "Takiyatosh shahri", regionId: 23 },
+  { id: 2321, name: "To'rtko'l shahri", regionId: 23 },
+  { id: 2322, name: "Xojeli shahri", regionId: 23 },
+  { id: 2323, name: "Chimboy shahri", regionId: 23 },
 ];
 
 async function main() {
-  console.log("Seeding cities...");
-
-  for (const city of CITIES) {
-    await prisma.city.upsert({
-      where: { slug: city.slug },
-      update: {},
-      create: city,
+  console.log("Seeding regions...");
+  for (const region of REGIONS) {
+    await prisma.region.upsert({
+      where: { id: region.id },
+      update: { name: region.name },
+      create: region,
     });
   }
+  console.log(`Created ${REGIONS.length} regions`);
 
-  const cities = await prisma.city.findMany({ orderBy: { id: "asc" } });
-  console.log(`Created ${cities.length} cities`);
-
-  console.log("Seeding routes (bidirectional)...");
-  let routeCount = 0;
-
-  for (let i = 0; i < cities.length; i++) {
-    for (let j = 0; j < cities.length; j++) {
-      if (i === j) continue;
-      await prisma.route.upsert({
-        where: {
-          fromCityId_toCityId: {
-            fromCityId: cities[i].id,
-            toCityId: cities[j].id,
-          },
-        },
-        update: {},
-        create: {
-          fromCityId: cities[i].id,
-          toCityId: cities[j].id,
-        },
-      });
-      routeCount++;
-    }
+  console.log("Seeding districts...");
+  for (const district of DISTRICTS) {
+    await prisma.district.upsert({
+      where: { id: district.id },
+      update: { name: district.name },
+      create: district,
+    });
   }
+  console.log(`Created ${DISTRICTS.length} districts`);
 
-  console.log(`Created ${routeCount} routes`);
   console.log("Seed completed.");
 }
 
