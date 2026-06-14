@@ -10,7 +10,7 @@ export async function favoritesRoutes(app: FastifyInstance) {
       const user = request.user as JwtPayload;
       return prisma.favoriteDriver.findMany({
         where: { passengerId: user.userId },
-        include: { driver: { include: { user: true, driver: true } } },
+        include: { driver: { include: { driver: true } } },
       });
     }
   );

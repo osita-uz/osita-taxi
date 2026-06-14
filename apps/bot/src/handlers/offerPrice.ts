@@ -13,7 +13,7 @@ export function registerOfferPriceHandler(bot: Bot<MyContext>) {
     }
 
     const telegramId = BigInt(ctx.from.id);
-    const user = await prisma.user.findUnique({ where: { telegramId } });
+    const user = await prisma.user.findUnique({ where: { telegramId }, include: { driver: true } });
     if (!user?.driver) return;
 
     const order = await prisma.order.findFirst({

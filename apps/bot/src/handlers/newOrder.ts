@@ -9,7 +9,7 @@ export function registerOrderHandlers(bot: Bot<MyContext>) {
     const orderId = Number(ctx.match[1]);
     const telegramId = BigInt(ctx.from.id);
 
-    const user = await prisma.user.findUnique({ where: { telegramId } });
+    const user = await prisma.user.findUnique({ where: { telegramId }, include: { driver: true } });
     if (!user?.driver) return ctx.answerCallbackQuery("Ruxsat yo'q");
 
     const order = await prisma.order.findUnique({ where: { id: orderId } });
