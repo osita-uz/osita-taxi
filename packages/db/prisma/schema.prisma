@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  PASSENGER
+  DRIVER
+  ADMIN
+}
+
+enum SeatType {
+  FULL
+  PARTIAL
+}
+
+enum Luggage {
+  NONE
+  SMALL
+  LARGE
+}
+
+enum OrderStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum PriceSource {
+  SURVEY
+  ACCEPTED_OFFER
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  telegramId BigInt   @unique
+  name       String
+  phone      String?
+  role       Role
+  isBlocked  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  driver         Driver?
+  passengerOrders Order[]          @relation("PassengerOrders")
+  favoritedBy    FavoriteDriver[]  @relation("FavoritedBy")
+  favorites      FavoriteDriver[]  @relation("Favorites")
+}
+
+model Driver {
+  userId      Int     @id
+  user        User    @relation(fields: [userId], references: [id])
+  rating      Float   @default(5.0)
+  ratingCount Int     @default(0)
+  isOnRoad    Boolean @default(false)
+
+  routes       DriverRoute[]
+  offers       Offer[]
+  onRoadStatus DriverOnRoad?
+  priceSurveys PriceSurvey[]
+}
+
+model City {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+  slug String @unique
+
+  fromRoutes Route[] @relation("FromCity")
+  toRoutes   Route[] @relation("ToCity")
+}
+
+model Route {
+  id         Int  @id @default(autoincrement())
+  fromCityId Int
+  toCityId   Int
+  fromCity   City @relation("FromCity", fields: [fromCityId], references: [id])
+  toCity     City @relation("ToCity", fields: [toCityId], references: [id])
+
+  driverRoutes DriverRoute[]
+  orders       Order[]
+  priceSurveys PriceSurvey[]
+
+  @@unique([fromCityId, toCityId])
+}
+
+model DriverRoute {
+  driverId Int
+  routeId  Int
+  driver   Driver @relation(fields: [driverId], references: [userId])
+  route    Route  @relation(fields: [routeId], references: [id])
+
+  @@id([driverId, routeId])
+}
+
+model DriverOnRoad {
+  driverId       Int      @id
+  driver         Driver   @relation(fields: [driverId], references: [userId])
+  routeId        Int
+  availableSeats Int
+  startedAt      DateTime @default(now())
+}
+
+model Order {
+  id          Int         @id @default(autoincrement())
+  passengerId Int
+  passenger   User        @relation("PassengerOrders", fields: [passengerId], references: [id])
+  routeId     Int
+  route       Route       @relation(fields: [routeId], references: [id])
+  fromPlace   String
+  toPlace     String
+  travelDate  DateTime
+  seatType    SeatType
+  seatCount   Int?
+  luggage     Luggage     @default(NONE)
+  price       Int
+  note        String?
+  isUrgent    Boolean     @default(false)
+  status      OrderStatus @default(ACTIVE)
+  isExtended  Boolean     @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime    @default(now())
+
+  offers Offer[]
+}
+
+model Offer {
+  id        Int         @id @default(autoincrement())
+  orderId   Int
+  order     Order       @relation(fields: [orderId], references: [id])
+  driverId  Int
+  driver    Driver      @relation(fields: [driverId], references: [userId])
+  price     Int
+  status    OfferStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+
+  @@unique([orderId, driverId])
+}
+
+model FavoriteDriver {
+  passengerId Int
+  driverId    Int
+  passenger   User     @relation("Favorites", fields: [passengerId], references: [id])
+  driver      User     @relation("FavoritedBy", fields: [driverId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@id([passengerId, driverId])
+}
+
+model PriceSurvey {
+  id        Int         @id @default(autoincrement())
+  routeId   Int
+  route     Route       @relation(fields: [routeId], references: [id])
+  driverId  Int
+  driver    Driver      @relation(fields: [driverId], references: [userId])
+  price     Int
+  source    PriceSource
+  createdAt DateTime    @default(now())
+}

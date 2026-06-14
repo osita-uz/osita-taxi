@@ -1,0 +1,24 @@
+{
+  "name": "bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/bot.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/bot.js"
+  },
+  "dependencies": {
+    "@grammyjs/conversations": "^1.2.0",
+    "@taxi/db": "workspace:*",
+    "@taxi/queue": "workspace:*",
+    "@taxi/shared": "workspace:*",
+    "grammy": "^1.26.0",
+    "ioredis": "^5.11.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.2",
+    "typescript": "^5.4.5"
+  }
+}

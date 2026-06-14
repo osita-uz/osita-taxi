@@ -1,0 +1,22 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build output
+**/dist
+
+# Environment files (inject via --env-file or docker secrets)
+.env
+*.env.local
+
+# Git & IDE
+.git
+.gitignore
+.DS_Store
+*.log
+
+# Docs
+docs/
+
+# Local Docker dev override
+docker-compose.dev.yml
