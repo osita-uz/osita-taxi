@@ -5,6 +5,13 @@ export type Luggage = "NONE" | "SMALL" | "LARGE";
 export type Role = "PASSENGER" | "DRIVER" | "ADMIN";
 export type PriceSource = "SURVEY" | "ACCEPTED_OFFER";
 
+export interface LocationDto {
+  id: number;
+  name: string;
+  parentId: number | null;
+  children?: LocationDto[];
+}
+
 export interface UserDto {
   id: number;
   telegramId: string;

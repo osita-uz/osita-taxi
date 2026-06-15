@@ -16,14 +16,19 @@ async function sendOrderToDriver(
     price: number;
     isUrgent: boolean;
     route: {
-      fromRegion: { name: string };
-      fromDistrict: { name: string } | null;
-      toRegion: { name: string };
-      toDistrict: { name: string } | null;
+      from: { name: string; parentId: number | null };
+      to: { name: string; parentId: number | null };
     };
   },
   botSendFn: (telegramId: string, text: string, orderId: number) => Promise<void>
 ) {
+  const fromName = order.route.from.parentId === null
+    ? `${order.route.from.name} (barchasi)`
+    : order.route.from.name;
+  const toName = order.route.to.parentId === null
+    ? `${order.route.to.name} (barchasi)`
+    : order.route.to.name;
+
   const date = order.travelDate.toLocaleDateString("uz-UZ", {
     day: "numeric",
     month: "long",
@@ -41,14 +46,13 @@ async function sendOrderToDriver(
 
   const text =
     `🆕 Yangi buyurtma\n\n` +
-    `📍 ${order.route.fromDistrict?.name ?? order.route.fromRegion.name + " (barchasi)"}, ${order.fromPlace} → ${order.route.toDistrict?.name ?? order.route.toRegion.name + " (barchasi)"}, ${order.toPlace}\n` +
+    `📍 ${fromName}, ${order.fromPlace} → ${toName}, ${order.toPlace}\n` +
     `📅 ${date}\n` +
     `💺 ${seat}${luggage}\n` +
     `💰 Mijoz narxi: ${order.price.toLocaleString()} so'm` +
     (order.isUrgent ? `\n⚡️ Tez ketaman!` : "");
 
   await botSendFn(driverTelegramId.toString(), text, order.id);
-
   await redis.incr(REDIS_KEYS.orderViews(order.id));
 }
 
@@ -62,7 +66,7 @@ export function createNotifyWorker(
 
       const order = await prisma.order.findUnique({
         where: { id: orderId },
-        include: { route: { include: { fromRegion: true, fromDistrict: true, toRegion: true, toDistrict: true } } },
+        include: { route: { include: { from: true, to: true } } },
       });
 
       if (!order || order.status !== "ACTIVE") return;

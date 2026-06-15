@@ -4,6 +4,12 @@ import { REDIS_KEYS } from "@taxi/shared";
 import { redis } from "@taxi/queue";
 import type { MyContext } from "../bot.js";
 
+function routeLabel(from: { name: string; parentId: number | null }, to: { name: string; parentId: number | null }): string {
+  const fromName = from.parentId === null ? `${from.name} (barchasi)` : from.name;
+  const toName = to.parentId === null ? `${to.name} (barchasi)` : to.name;
+  return `${fromName} → ${toName}`;
+}
+
 export async function onroadConversation(
   conversation: Conversation<MyContext>,
   ctx: MyContext
@@ -13,7 +19,13 @@ export async function onroadConversation(
     prisma.user.findUnique({
       where: { telegramId },
       include: {
-        driver: { include: { routes: { include: { route: { include: { fromRegion: true, fromDistrict: true, toRegion: true, toDistrict: true } } } } } },
+        driver: {
+          include: {
+            routes: {
+              include: { route: { include: { from: true, to: true } } },
+            },
+          },
+        },
       },
     })
   );
@@ -23,11 +35,12 @@ export async function onroadConversation(
     return;
   }
 
-  const routeButtons = user.driver.routes.map((dr) => {
-    const from = dr.route.fromDistrict?.name ?? `${dr.route.fromRegion.name} (barchasi)`;
-    const to = dr.route.toDistrict?.name ?? `${dr.route.toRegion.name} (barchasi)`;
-    return [{ text: `${from} → ${to}`, callback_data: `onroad_route:${dr.routeId}` }];
-  });
+  const routeButtons = user.driver.routes.map((dr) => [
+    {
+      text: routeLabel(dr.route.from, dr.route.to),
+      callback_data: `onroad_route:${dr.routeId}`,
+    },
+  ]);
 
   await ctx.reply("Qaysi yo'nalishda borasiz?", {
     reply_markup: { inline_keyboard: routeButtons },

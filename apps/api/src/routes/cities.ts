@@ -4,18 +4,49 @@ import { redis } from "@taxi/queue";
 import { REDIS_KEYS } from "@taxi/shared";
 
 export async function citiesRoutes(app: FastifyInstance) {
-  app.get("/regions", async () => {
-    return prisma.region.findMany({ orderBy: { id: "asc" } });
+  app.get("/locations", async () => {
+    return prisma.location.findMany({
+      where: { parentId: null },
+      orderBy: { id: "asc" },
+      include: {
+        children: { orderBy: { name: "asc" } },
+      },
+    });
   });
 
-  app.get<{ Params: { regionId: string } }>(
-    "/regions/:regionId/districts",
+  app.get<{ Params: { locationId: string } }>(
+    "/locations/:locationId/children",
     async (request) => {
-      const regionId = Number(request.params.regionId);
-      return prisma.district.findMany({
-        where: { regionId },
+      const locationId = Number(request.params.locationId);
+      return prisma.location.findMany({
+        where: { parentId: locationId },
         orderBy: { name: "asc" },
       });
+    }
+  );
+
+  // Mini App uchun: fromLocationId + toLocationId dan route topish yoki yaratish
+  app.get<{ Querystring: { fromLocationId: string; toLocationId: string } }>(
+    "/routes/lookup",
+    async (request, reply) => {
+      const fromId = Number(request.query.fromLocationId);
+      const toId = Number(request.query.toLocationId);
+
+      if (!fromId || !toId) {
+        return reply.code(400).send({ error: "fromLocationId and toLocationId are required" });
+      }
+
+      let route = await prisma.route.findFirst({
+        where: { fromLocationId: fromId, toLocationId: toId },
+      });
+
+      if (!route) {
+        route = await prisma.route.create({
+          data: { fromLocationId: fromId, toLocationId: toId },
+        });
+      }
+
+      return { id: route.id };
     }
   );
 

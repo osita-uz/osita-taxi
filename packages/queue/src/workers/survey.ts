@@ -11,10 +11,8 @@ export function createSurveyWorker(
     async () => {
       const routes = await prisma.route.findMany({
         include: {
-          fromRegion: true,
-          fromDistrict: true,
-          toRegion: true,
-          toDistrict: true,
+          from: true,
+          to: true,
           driverRoutes: { include: { driver: { include: { user: true } } } },
         },
       });
@@ -24,9 +22,16 @@ export function createSurveyWorker(
         const sampleSize = Math.ceil(drivers.length * PRICE_SURVEY_SAMPLE_RATE);
         const shuffled = drivers.sort(() => Math.random() - 0.5).slice(0, sampleSize);
 
+        const fromName = route.from.parentId === null
+          ? `${route.from.name} (barchasi)`
+          : route.from.name;
+        const toName = route.to.parentId === null
+          ? `${route.to.name} (barchasi)`
+          : route.to.name;
+
         const text =
           `📊 Narx so'rovi\n\n` +
-          `${route.fromDistrict?.name ?? route.fromRegion.name + " (barchasi)"} → ${route.toDistrict?.name ?? route.toRegion.name + " (barchasi)"} yo'nalishi uchun\n` +
+          `${fromName} → ${toName} yo'nalishi uchun\n` +
           `hozirgi narxingiz qanday? (so'mda)`;
 
         for (const driver of shuffled) {

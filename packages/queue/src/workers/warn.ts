@@ -15,7 +15,7 @@ export function createWarnWorker(
         where: { id: orderId },
         include: {
           passenger: true,
-          route: { include: { fromRegion: true, fromDistrict: true, toRegion: true, toDistrict: true } },
+          route: { include: { from: true, to: true } },
         },
       });
 
@@ -28,9 +28,16 @@ export function createWarnWorker(
         minute: "2-digit",
       });
 
+      const fromName = order.route.from.parentId === null
+        ? `${order.route.from.name} (barchasi)`
+        : order.route.from.name;
+      const toName = order.route.to.parentId === null
+        ? `${order.route.to.name} (barchasi)`
+        : order.route.to.name;
+
       const text =
         `⏳ Buyurtmangizga 15 daqiqa qoldi!\n` +
-        `${order.route.fromDistrict?.name ?? order.route.fromRegion.name + " (barchasi)"} → ${order.route.toDistrict?.name ?? order.route.toRegion.name + " (barchasi)"} (${dateStr})`;
+        `${fromName} → ${toName} (${dateStr})`;
 
       await botSendFn(
         order.passenger.telegramId.toString(),

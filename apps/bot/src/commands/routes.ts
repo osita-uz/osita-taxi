@@ -2,6 +2,12 @@ import { Bot, InlineKeyboard } from "grammy";
 import { prisma } from "@taxi/db";
 import type { MyContext } from "../bot.js";
 
+function routeLabel(from: { name: string; parentId: number | null }, to: { name: string; parentId: number | null }): string {
+  const fromName = from.parentId === null ? `${from.name} (barchasi)` : from.name;
+  const toName = to.parentId === null ? `${to.name} (barchasi)` : to.name;
+  return `${fromName} → ${toName}`;
+}
+
 export function registerRoutesCommand(bot: Bot<MyContext>) {
   bot.command("routes", async (ctx) => {
     await showRoutes(ctx);
@@ -38,7 +44,9 @@ async function showRoutes(ctx: any) {
     include: {
       driver: {
         include: {
-          routes: { include: { route: { include: { fromRegion: true, fromDistrict: true, toRegion: true, toDistrict: true } } } },
+          routes: {
+            include: { route: { include: { from: true, to: true } } },
+          },
         },
       },
     },
@@ -51,9 +59,7 @@ async function showRoutes(ctx: any) {
 
   const kb = new InlineKeyboard();
   for (const dr of user.driver.routes) {
-    const from = dr.route.fromDistrict?.name ?? `${dr.route.fromRegion.name} (barchasi)`;
-    const to = dr.route.toDistrict?.name ?? `${dr.route.toRegion.name} (barchasi)`;
-    kb.text(`${from} → ${to}`, `noop`)
+    kb.text(routeLabel(dr.route.from, dr.route.to), "noop")
       .text("❌", `route_delete:${dr.routeId}`)
       .row();
   }

@@ -5,6 +5,7 @@
   "scripts": {
     "dev:api": "dotenv -e .env -- pnpm --filter api dev",
     "dev:bot": "dotenv -e .env -- pnpm --filter bot dev",
+    "dev:mini-app": "pnpm --filter mini-app dev",
     "db:migrate": "dotenv -e .env -- pnpm --filter db migrate:dev",
     "db:seed": "dotenv -e .env -- pnpm --filter db seed",
     "build": "pnpm -r build",

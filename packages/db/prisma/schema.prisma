@@ -70,21 +70,17 @@ model Driver {
 }
 
 model Route {
-  id             Int       @id @default(autoincrement())
-  fromRegionId   Int
-  fromDistrictId Int?
-  toRegionId     Int
-  toDistrictId   Int?
-  fromRegion     Region    @relation("RouteFromRegion", fields: [fromRegionId], references: [id])
-  fromDistrict   District? @relation("FromDistrict", fields: [fromDistrictId], references: [id])
-  toRegion       Region    @relation("RouteToRegion", fields: [toRegionId], references: [id])
-  toDistrict     District? @relation("ToDistrict", fields: [toDistrictId], references: [id])
+  id             Int      @id @default(autoincrement())
+  fromLocationId Int
+  toLocationId   Int
+  from           Location @relation("RouteFrom", fields: [fromLocationId], references: [id])
+  to             Location @relation("RouteTo",   fields: [toLocationId],   references: [id])
 
   driverRoutes DriverRoute[]
   orders       Order[]
   priceSurveys PriceSurvey[]
 
-  @@unique([fromRegionId, fromDistrictId, toRegionId, toDistrictId])
+  @@unique([fromLocationId, toLocationId])
 }
 
 model DriverRoute {
@@ -161,20 +157,13 @@ model PriceSurvey {
   createdAt DateTime    @default(now())
 }
 
-model Region {
-  id        Int        @id
-  name      String
-  districts District[]
-  fromRoutes Route[]   @relation("RouteFromRegion")
-  toRoutes   Route[]   @relation("RouteToRegion")
-}
-
-model District {
-  id       Int    @id
+model Location {
+  id       Int        @id @default(autoincrement())
   name     String
-  regionId Int
-  region   Region @relation(fields: [regionId], references: [id])
+  parentId Int?
+  parent   Location?  @relation("LocationTree", fields: [parentId], references: [id])
+  children Location[] @relation("LocationTree")
 
-  fromRoutes Route[] @relation("FromDistrict")
-  toRoutes   Route[] @relation("ToDistrict")
+  fromRoutes Route[] @relation("RouteFrom")
+  toRoutes   Route[] @relation("RouteTo")
 }

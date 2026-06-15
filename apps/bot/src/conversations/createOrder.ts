@@ -25,7 +25,7 @@ export async function createOrderConversation(
   const telegramId = BigInt(ctx.from!.id);
 
   const regions = await conversation.external(() =>
-    prisma.region.findMany({ orderBy: { id: "asc" } })
+    prisma.location.findMany({ where: { parentId: null }, orderBy: { id: "asc" } })
   );
 
   // --- FROM REGION ---
@@ -49,7 +49,7 @@ export async function createOrderConversation(
 
   // --- FROM DISTRICT ---
   const fromDistricts = await conversation.external(() =>
-    prisma.district.findMany({ where: { regionId: fromRegionId }, orderBy: { name: "asc" } })
+    prisma.location.findMany({ where: { parentId: fromRegionId }, orderBy: { name: "asc" } })
   );
   await ctx.api.editMessageText(
     ctx.chat!.id, msg.message_id,
@@ -70,14 +70,14 @@ export async function createOrderConversation(
     await fromCtx.answerCallbackQuery();
     fromCtx = await conversation.waitFor("callback_query:data");
   }
-  const fromDistrictId = Number(fromCtx.callbackQuery.data.split(":")[1]);
+  const fromLocationId = Number(fromCtx.callbackQuery.data.split(":")[1]);
   await fromCtx.answerCallbackQuery();
-  const fromDistrict = fromDistricts.find((d) => d.id === fromDistrictId)!;
+  const fromLocation = fromDistricts.find((d) => d.id === fromLocationId)!;
 
   // --- TO REGION ---
   await ctx.api.editMessageText(
     ctx.chat!.id, msg.message_id,
-    `📍 <b>${fromDistrict.name}</b> dan — qaysi viloyatga borasiz?`,
+    `📍 <b>${fromLocation.name}</b> dan — qaysi viloyatga borasiz?`,
     {
       parse_mode: "HTML",
       reply_markup: {
@@ -100,17 +100,17 @@ export async function createOrderConversation(
 
   // --- TO DISTRICT ---
   const toDistricts = await conversation.external(() =>
-    prisma.district.findMany({ where: { regionId: toRegionId }, orderBy: { name: "asc" } })
+    prisma.location.findMany({ where: { parentId: toRegionId }, orderBy: { name: "asc" } })
   );
   await ctx.api.editMessageText(
     ctx.chat!.id, msg.message_id,
-    `📍 <b>${fromDistrict.name} → ${toRegion.name}</b> — qaysi tuman/shahar?`,
+    `📍 <b>${fromLocation.name} → ${toRegion.name}</b> — qaysi tuman/shahar?`,
     {
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: toRows(
           toDistricts
-            .filter((d) => d.id !== fromDistrictId)
+            .filter((d) => d.id !== fromLocationId)
             .map((d) => ({ text: d.name, callback_data: `co_to:${d.id}` })),
           2
         ),
@@ -123,14 +123,14 @@ export async function createOrderConversation(
     await toCtx.answerCallbackQuery();
     toCtx = await conversation.waitFor("callback_query:data");
   }
-  const toDistrictId = Number(toCtx.callbackQuery.data.split(":")[1]);
+  const toLocationId = Number(toCtx.callbackQuery.data.split(":")[1]);
   await toCtx.answerCallbackQuery();
-  const toDistrict = toDistricts.find((d) => d.id === toDistrictId)!;
+  const toLocation = toDistricts.find((d) => d.id === toLocationId)!;
 
   // --- FROM PLACE ---
   await ctx.api.editMessageText(
     ctx.chat!.id, msg.message_id,
-    `📍 <b>${fromDistrict.name} → ${toDistrict.name}</b>\n\nAniq joy yoki manzilni kiriting\n(masalan: Yunusobod 7-mavze, avtobekati):`,
+    `📍 <b>${fromLocation.name} → ${toLocation.name}</b>\n\nAniq joy yoki manzilni kiriting\n(masalan: Yunusobod 7-mavze, avtobekati):`,
     { parse_mode: "HTML", reply_markup: { inline_keyboard: [] } }
   );
   const fromPlaceCtx = await conversation.waitFor("message:text");
@@ -251,7 +251,7 @@ export async function createOrderConversation(
 
   await ctx.reply(
     `📋 <b>Buyurtmangiz:</b>\n\n` +
-    `📍 ${fromDistrict.name}, ${fromPlace}\n    → ${toDistrict.name}, ${toPlace}\n` +
+    `📍 ${fromLocation.name}, ${fromPlace}\n    → ${toLocation.name}, ${toPlace}\n` +
     `📅 ${dateStr}\n` +
     `💺 ${seatStr} | 🧳 ${lugStr}\n` +
     `💰 ${finalPrice.toLocaleString()} so'm` +
@@ -287,13 +287,11 @@ export async function createOrderConversation(
     const user = await prisma.user.findUnique({ where: { telegramId } });
     if (!user) return null;
 
-    const route =
-      (await prisma.route.findFirst({
-        where: { fromRegionId, fromDistrictId, toRegionId, toDistrictId },
-      })) ??
-      (await prisma.route.create({
-        data: { fromRegionId, fromDistrictId, toRegionId, toDistrictId },
-      }));
+    const route = await prisma.route.upsert({
+      where: { fromLocationId_toLocationId: { fromLocationId, toLocationId } },
+      update: {},
+      create: { fromLocationId, toLocationId },
+    });
 
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + ORDER_LIFETIME_HOURS);

@@ -66,18 +66,19 @@ export async function registrationConversation(
 
   // --- DRIVER: route selection ---
   const regions = await conversation.external(() =>
-    prisma.region.findMany({ orderBy: { id: "asc" } })
+    prisma.location.findMany({ where: { parentId: null }, orderBy: { id: "asc" } })
   );
 
   const selectedRouteIds: number[] = [];
-  let fromDistrictId: number | null = null;
-  let fromRegionId: number | null = null;
-  let toRegionId: number | null = null;
+  let fromLocationId: number | null = null;
+  let fromLabel: string | null = null;
+  let pendingParentId: number | null = null;
+  let step: "from_parent" | "from_child" | "to_parent" | "to_child" = "from_parent";
 
   await ctx.reply("Qaysi viloyatdan chiqasiz? (1-qadam)", {
     reply_markup: {
       inline_keyboard: toRows(
-        regions.map((r) => ({ text: r.name, callback_data: `reg_fromreg:${r.id}` })),
+        regions.map((r) => ({ text: r.name, callback_data: `reg_from_parent:${r.id}` })),
         1
       ),
     },
@@ -88,78 +89,69 @@ export async function registrationConversation(
     const data = cbCtx.callbackQuery.data;
     await cbCtx.answerCallbackQuery();
 
-    if (data.startsWith("reg_fromreg:")) {
-      fromRegionId = Number(data.split(":")[1]);
-      const fRid = fromRegionId;
-      const fromRegion = regions.find((r) => r.id === fRid)!;
-      const districts = await conversation.external(() =>
-        prisma.district.findMany({
-          where: { regionId: fRid },
-          orderBy: { name: "asc" },
-        })
+    if (step === "from_parent" && data.startsWith("reg_from_parent:")) {
+      pendingParentId = Number(data.split(":")[1]);
+      const parent = regions.find((r) => r.id === pendingParentId)!;
+      const children = await conversation.external(() =>
+        prisma.location.findMany({ where: { parentId: pendingParentId! }, orderBy: { name: "asc" } })
       );
-      await ctx.reply(`📍 ${fromRegion.name} — qaysi tuman/shahar?`, {
+      step = "from_child";
+      await ctx.reply(`📍 ${parent.name} — qaysi tuman/shahar?`, {
         reply_markup: {
           inline_keyboard: toRows(
-            districts.map((d) => ({ text: d.name, callback_data: `reg_from:${d.id}` })),
+            children.map((c) => ({ text: c.name, callback_data: `reg_from_child:${c.id}` })),
             2
           ),
         },
       });
-    } else if (data.startsWith("reg_from:")) {
-      fromDistrictId = Number(data.split(":")[1]);
+    } else if (step === "from_child" && data.startsWith("reg_from_child:")) {
+      fromLocationId = Number(data.split(":")[1]);
+      const children = await conversation.external(() =>
+        prisma.location.findMany({ where: { parentId: pendingParentId! }, orderBy: { name: "asc" } })
+      );
+      fromLabel = children.find((c) => c.id === fromLocationId)?.name ?? String(fromLocationId);
+      step = "to_parent";
       await ctx.reply("Qaysi viloyatga borasiz? (2-qadam)", {
         reply_markup: {
           inline_keyboard: toRows(
-            regions.map((r) => ({ text: r.name, callback_data: `reg_toreg:${r.id}` })),
+            regions.map((r) => ({ text: r.name, callback_data: `reg_to_parent:${r.id}` })),
             1
           ),
         },
       });
-    } else if (data.startsWith("reg_toreg:")) {
-      toRegionId = Number(data.split(":")[1]);
-      const tRid = toRegionId;
-      const toRegion = regions.find((r) => r.id === tRid)!;
-      const districts = await conversation.external(() =>
-        prisma.district.findMany({
-          where: { regionId: tRid },
-          orderBy: { name: "asc" },
-        })
+    } else if (step === "to_parent" && data.startsWith("reg_to_parent:")) {
+      pendingParentId = Number(data.split(":")[1]);
+      const parent = regions.find((r) => r.id === pendingParentId)!;
+      const children = await conversation.external(() =>
+        prisma.location.findMany({ where: { parentId: pendingParentId! }, orderBy: { name: "asc" } })
       );
-      await ctx.reply(`📍 ${toRegion.name} — qaysi tuman/shahar?`, {
+      step = "to_child";
+      await ctx.reply(`📍 ${parent.name} — qaysi tuman/shahar?`, {
         reply_markup: {
           inline_keyboard: toRows(
-            districts
-              .filter((d) => d.id !== fromDistrictId)
-              .map((d) => ({ text: d.name, callback_data: `reg_to:${d.id}` })),
+            children
+              .filter((c) => c.id !== fromLocationId)
+              .map((c) => ({ text: c.name, callback_data: `reg_to_child:${c.id}` })),
             2
           ),
         },
       });
-    } else if (data.startsWith("reg_to:") && fromDistrictId !== null && fromRegionId !== null && toRegionId !== null) {
-      const toDistrictId = Number(data.split(":")[1]);
-      const fRid = fromRegionId;
-      const fDid = fromDistrictId;
-      const tRid = toRegionId;
+    } else if (step === "to_child" && data.startsWith("reg_to_child:") && fromLocationId !== null) {
+      const toLocationId = Number(data.split(":")[1]);
+      const fId = fromLocationId;
       const route = await conversation.external(() =>
         prisma.route.upsert({
-          where: {
-            fromRegionId_fromDistrictId_toRegionId_toDistrictId: {
-              fromRegionId: fRid,
-              fromDistrictId: fDid,
-              toRegionId: tRid,
-              toDistrictId,
-            },
-          },
+          where: { fromLocationId_toLocationId: { fromLocationId: fId, toLocationId } },
           update: {},
-          create: { fromRegionId: fRid, fromDistrictId: fDid, toRegionId: tRid, toDistrictId },
+          create: { fromLocationId: fId, toLocationId },
         })
       );
       if (!selectedRouteIds.includes(route.id)) {
         selectedRouteIds.push(route.id);
       }
-      fromDistrictId = null;
-      toRegionId = null;
+      fromLocationId = null;
+      fromLabel = null;
+      step = "from_parent";
       await ctx.reply("Marshrut qo'shildi ✅\nYana marshrut qo'shishni xohlaysizmi?", {
         reply_markup: {
           inline_keyboard: [[
@@ -169,12 +161,13 @@ export async function registrationConversation(
         },
       });
     } else if (data === "reg_more") {
-      fromRegionId = null;
-      toRegionId = null;
+      step = "from_parent";
+      fromLocationId = null;
+      fromLabel = null;
       await ctx.reply("Qaysi viloyatdan chiqasiz?", {
         reply_markup: {
           inline_keyboard: toRows(
-            regions.map((r) => ({ text: r.name, callback_data: `reg_fromreg:${r.id}` })),
+            regions.map((r) => ({ text: r.name, callback_data: `reg_from_parent:${r.id}` })),
             1
           ),
         },

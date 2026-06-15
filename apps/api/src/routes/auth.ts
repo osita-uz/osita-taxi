@@ -18,7 +18,8 @@ export async function authRoutes(app: FastifyInstance) {
       }
 
       const botToken = process.env.BOT_TOKEN ?? "";
-      if (botToken && !verifyInitData(initData, botToken)) {
+      const isDev = process.env.NODE_ENV !== "production";
+      if (!isDev && botToken && !verifyInitData(initData, botToken)) {
         return reply.code(401).send({ error: "Invalid initData" });
       }
 

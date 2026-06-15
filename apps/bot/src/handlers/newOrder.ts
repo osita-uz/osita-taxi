@@ -103,12 +103,17 @@ export function formatOrderMessage(order: {
   price: number;
   isUrgent: boolean;
   route: {
-    fromRegion: { name: string };
-    fromDistrict: { name: string } | null;
-    toRegion: { name: string };
-    toDistrict: { name: string } | null;
+    from: { name: string; parentId: number | null };
+    to: { name: string; parentId: number | null };
   };
 }): string {
+  const fromName = order.route.from.parentId === null
+    ? `${order.route.from.name} (barchasi)`
+    : order.route.from.name;
+  const toName = order.route.to.parentId === null
+    ? `${order.route.to.name} (barchasi)`
+    : order.route.to.name;
+
   const date = order.travelDate.toLocaleDateString("uz-UZ", {
     day: "numeric",
     month: "long",
@@ -126,7 +131,7 @@ export function formatOrderMessage(order: {
 
   return (
     `🆕 Yangi buyurtma\n\n` +
-    `📍 ${order.route.fromDistrict?.name ?? order.route.fromRegion.name + " (barchasi)"}, ${order.fromPlace} → ${order.route.toDistrict?.name ?? order.route.toRegion.name + " (barchasi)"}, ${order.toPlace}\n` +
+    `📍 ${fromName}, ${order.fromPlace} → ${toName}, ${order.toPlace}\n` +
     `📅 ${date}\n` +
     `💺 ${seat}${luggage}\n` +
     `💰 Mijoz narxi: ${order.price.toLocaleString()} so'm` +

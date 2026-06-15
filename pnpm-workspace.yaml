@@ -4,6 +4,8 @@ packages:
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
+  core-js: true
   esbuild: true
   msgpackr-extract: true
   prisma: true
+  vue-demi: true

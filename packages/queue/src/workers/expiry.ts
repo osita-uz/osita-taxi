@@ -20,7 +20,7 @@ export function createExpiryWorker(
           isExtended: false,
           expiresAt: { gt: now, lte: warnThreshold },
         },
-        include: { passenger: true, route: { include: { fromRegion: true, fromDistrict: true, toRegion: true, toDistrict: true } } },
+        include: { passenger: true, route: { include: { from: true, to: true } } },
       });
 
       for (const order of soonExpiring) {
@@ -32,7 +32,7 @@ export function createExpiryWorker(
         where: { status: "ACTIVE", expiresAt: { lte: now } },
         include: {
           offers: { include: { driver: { include: { user: true } } } },
-          route: { include: { fromRegion: true, fromDistrict: true, toRegion: true, toDistrict: true } },
+          route: { include: { from: true, to: true } },
         },
       });
 
@@ -49,9 +49,16 @@ export function createExpiryWorker(
           minute: "2-digit",
         });
 
+        const fromName = order.route.from.parentId === null
+          ? `${order.route.from.name} (barchasi)`
+          : order.route.from.name;
+        const toName = order.route.to.parentId === null
+          ? `${order.route.to.name} (barchasi)`
+          : order.route.to.name;
+
         const text =
           `❌ Buyurtma bekor qilindi\n\n` +
-          `${order.route.fromDistrict?.name ?? order.route.fromRegion.name + " (barchasi)"} → ${order.route.toDistrict?.name ?? order.route.toRegion.name + " (barchasi)"} (${dateStr})\n` +
+          `${fromName} → ${toName} (${dateStr})\n` +
           `Taklifingiz bekor bo'ldi.`;
 
         for (const offer of order.offers) {
