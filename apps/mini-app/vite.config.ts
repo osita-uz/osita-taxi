@@ -12,7 +12,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: "0.0.0.0",
-    allowedHosts: ["taxi.jprq.live"],
+    allowedHosts: [".jprq.live", ".ngrok-free.app"],
     proxy: {
       "/api": {
         target: "http://192.168.0.211:3000",
